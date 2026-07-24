@@ -323,6 +323,34 @@
     </div>
 
     <script>
+        // Fungsi pembacaan file terpisah
+        function processFile(file) {
+            if (!file) return;
+            document.getElementById('fileName').innerText = file.name;
+            document.getElementById('fileInfo').style.display = 'block';
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                document.getElementById('luaText').value = evt.target.result;
+            };
+            reader.onerror = function() {
+                alert('Gagal membaca file!');
+            };
+            reader.readAsText(file);
+        }
+
+        window.handleFileUpload = function(e) {
+            const file = e.target.files[0];
+            processFile(file);
+        };
+
+        // Fungsi Base64 yang aman untuk UTF-8 / Simbol Khusus
+        function utf8ToBase64(str) {
+            const bytes = new TextEncoder().encode(str);
+            const binString = String.fromCodePoint(...bytes);
+            return btoa(binString);
+        }
+
         window.createRawLink = function() {
             const luaCode = document.getElementById('luaText').value;
 
@@ -336,11 +364,10 @@
             btn.disabled = true;
 
             try {
-                // Encode kode ke base64
-                const encoded = btoa(unescape(encodeURIComponent(luaCode)));
+                // Safely Encode ke Base64
+                const encoded = utf8ToBase64(luaCode);
                 
-                // Generate URL dengan base64
-                const directRawUrl = `https://lua-hub-script.github.io/LUA-HUB-RAW/raw.html?code=${encoded}`;
+                const directRawUrl = `https://lua-hub-script.github.io/LUA-HUB-RAW/raw.html?code=${encodeURIComponent(encoded)}`;
                 const loadstringFormat = `loadstring(game:HttpGet("${directRawUrl}"))()`;
 
                 document.getElementById('rawUrlInput').value = directRawUrl;
@@ -356,24 +383,16 @@
             }
         };
 
-        window.handleFileUpload = function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                document.getElementById('fileName').innerText = file.name;
-                document.getElementById('fileInfo').style.display = 'block';
-
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    document.getElementById('luaText').value = evt.target.result;
-                };
-                reader.readAsText(file);
-            }
-        };
-
         window.copyToClipboard = function(id, btnElement) {
             const inputField = document.getElementById(id);
             inputField.select();
-            navigator.clipboard.writeText(inputField.value);
+            inputField.setSelectionRange(0, 99999);
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(inputField.value);
+            } else {
+                document.execCommand('copy');
+            }
             
             const originalHTML = btnElement.innerHTML;
             btnElement.innerHTML = `<i class="fa-solid fa-check" style="color:#00ff88;"></i> Copied!`;
@@ -383,6 +402,7 @@
             }, 1800);
         };
 
+        // Logika Drag & Drop
         const dropZone = document.getElementById('dropZone');
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, (e) => {
@@ -397,6 +417,14 @@
                 dropZone.classList.remove('dragover');
             }, false);
         });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files.length > 0) {
+                processFile(files[0]);
+            }
+        }, false);
     </script>
 </body>
 </html>
