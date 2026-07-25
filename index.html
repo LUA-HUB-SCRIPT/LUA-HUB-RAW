@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUA-HUB-RAW | Premium Lua Uploader</title>
+    <title>LUA-HUB-RAW | Premium Luau Uploader</title>
     <!-- Google Fonts & FontAwesome Icons -->
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -19,6 +19,7 @@
             --text-main: #f0f6fc;
             --text-muted: #8b949e;
             --input-bg: #0d1117;
+            --error-red: #ff4a4a;
         }
 
         * {
@@ -198,14 +199,6 @@
             background: #00e67a;
         }
 
-        .btn-generate:disabled {
-            background: #21262d;
-            color: var(--text-muted);
-            cursor: not-allowed;
-            box-shadow: none;
-            transform: none;
-        }
-
         .result-section {
             display: none;
             margin-top: 24px;
@@ -273,32 +266,31 @@
     <div class="container">
         <header>
             <h1><i class="fa-solid fa-code"></i> LUA-HUB-RAW</h1>
-            <p>Konversi script Lua Anda menjadi Raw Direct Loadstring secara instan</p>
+            <p>Konversi script Roblox Luau Anda menjadi Direct Raw Link secara instan</p>
         </header>
 
-        <!-- Upload File Drag & Drop -->
+        <!-- Upload File -->
         <div class="field-group">
-            <label><i class="fa-solid fa-file-arrow-up"></i> Upload File Script</label>
+            <label><i class="fa-solid fa-file-arrow-up"></i> Upload File Script (.lua / .luau)</label>
             <div class="upload-zone" id="dropZone">
                 <i class="fa-solid fa-cloud-arrow-up"></i>
-                <p>Tarik & Lepas file <span>.lua</span> / <span>.txt</span> ke sini atau <span>Cari File</span></p>
-                <input type="file" id="luaFile" accept=".lua,.txt" onchange="handleFileUpload(event)">
+                <p>Tarik & Lepas file <span>.lua</span> / <span>.luau</span> ke sini atau <span>Cari File</span></p>
+                <input type="file" id="luaFile" accept=".lua,.luau" onchange="handleFileUpload(event)">
             </div>
             <div id="fileInfo" class="file-info"><i class="fa-solid fa-check"></i> File Terpilih: <span id="fileName"></span></div>
         </div>
 
-        <!-- Editor Input Teks -->
+        <!-- Text Area -->
         <div class="field-group">
-            <label><i class="fa-solid fa-terminal"></i> Atau Paste Kode Lua Murni</label>
-            <textarea id="luaText" placeholder="-- Tempel kode Lua Anda di sini&#10;print('Hello World from Lua Hub!')"></textarea>
+            <label><i class="fa-solid fa-terminal"></i> Atau Tempel Kode Roblox Luau Murni</label>
+            <textarea id="luaText" placeholder="-- Tempel kode Roblox Luau Anda di sini&#10;print('Hello World from Luau!')"></textarea>
         </div>
 
-        <!-- Tombol Generate -->
         <button class="btn-generate" id="btnGenerate" onclick="createRawLink()">
             <i class="fa-solid fa-bolt"></i> Get Raw Link
         </button>
 
-        <!-- Hasil Output -->
+        <!-- Hasil -->
         <div id="resultBox" class="result-section">
             <div class="field-group">
                 <label><i class="fa-solid fa-link"></i> Direct Raw URL</label>
@@ -311,7 +303,7 @@
             </div>
 
             <div class="field-group">
-                <label><i class="fa-solid fa-code-merge"></i> Ready Loadstring Format (Roblox)</label>
+                <label><i class="fa-solid fa-code-merge"></i> Loadstring Format (Roblox)</label>
                 <div class="input-with-button">
                     <input type="text" id="loadstringInput" readonly>
                     <button class="btn-copy" onclick="copyToClipboard('loadstringInput', this)">
@@ -323,9 +315,21 @@
     </div>
 
     <script>
-        // Fungsi pembacaan file terpisah
+        // Validasi Ekstensi File (.lua / .luau saja)
+        function isValidLuauFile(fileName) {
+            const ext = fileName.slice((fileName.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
+            return ext === "lua" || ext === "luau";
+        }
+
         function processFile(file) {
             if (!file) return;
+
+            if (!isValidLuauFile(file.name)) {
+                alert("Format file tidak didukung! Harap unggah file ber-ekstensi .lua atau .luau saja.");
+                document.getElementById('luaFile').value = "";
+                return;
+            }
+
             document.getElementById('fileName').innerText = file.name;
             document.getElementById('fileInfo').style.display = 'block';
 
@@ -344,7 +348,7 @@
             processFile(file);
         };
 
-        // Fungsi Base64 yang aman untuk UTF-8 / Simbol Khusus
+        // Encoder Base64 UTF-8 yang Aman
         function utf8ToBase64(str) {
             const bytes = new TextEncoder().encode(str);
             const binString = String.fromCodePoint(...bytes);
@@ -355,7 +359,7 @@
             const luaCode = document.getElementById('luaText').value;
 
             if (!luaCode.trim()) {
-                alert('Harap masukkan teks atau upload file script Lua!');
+                alert('Harap masukkan teks atau unggah file script Luau!');
                 return;
             }
 
@@ -364,10 +368,11 @@
             btn.disabled = true;
 
             try {
-                // Safely Encode ke Base64
                 const encoded = utf8ToBase64(luaCode);
                 
-                const directRawUrl = `https://lua-hub-script.github.io/LUA-HUB-RAW/raw.html?code=${encodeURIComponent(encoded)}`;
+                // Menghasilkan URL dinamis ke raw.html
+                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                const directRawUrl = `${baseUrl}/raw.html?code=${encodeURIComponent(encoded)}`;
                 const loadstringFormat = `loadstring(game:HttpGet("${directRawUrl}"))()`;
 
                 document.getElementById('rawUrlInput').value = directRawUrl;
@@ -386,7 +391,6 @@
         window.copyToClipboard = function(id, btnElement) {
             const inputField = document.getElementById(id);
             inputField.select();
-            inputField.setSelectionRange(0, 99999);
 
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(inputField.value);
@@ -402,7 +406,7 @@
             }, 1800);
         };
 
-        // Logika Drag & Drop
+        // Drag & Drop
         const dropZone = document.getElementById('dropZone');
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, (e) => {
